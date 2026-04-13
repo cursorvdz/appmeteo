@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#ebebed" />
+  <meta name="description" content="Meteo La Nordica - Extraflame: previsioni, vento, umidità e 5 giorni." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Meteo Nordica" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="assets/logo.png" />
+  <link rel="preconnect" href="https://api.open-meteo.com" />
+  <link rel="preconnect" href="https://geocoding-api.open-meteo.com" />
+  <title>Meteo La Nordica - Extraflame</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <div class="shell" id="shell">
+      <header class="topbar">
+        <h1 class="topbar__title">Meteo</h1>
+        <div class="topbar__right">
+          <button type="button" class="btn-text" id="btnInstallHelp" title="Guida installazione">Installa</button>
+          <button type="button" class="btn-icon btn-icon--light" id="btnInstall" hidden aria-label="Installa app" title="Installa">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          </button>
+          <img src="assets/logo.png" alt="La Nordica Extraflame" class="topbar__logo" width="120" height="36" />
+        </div>
+      </header>
+
+      <section class="install-guide" id="installGuide" hidden>
+        <div class="install-guide__head">
+          <strong id="installGuideTitle">Installare sul telefono</strong>
+          <button type="button" class="install-guide__close" id="installGuideClose" aria-label="Chiudi">×</button>
+        </div>
+        <p class="install-guide__lead" id="installGuideLead"></p>
+        <ol class="install-guide__steps" id="installGuideSteps"></ol>
+        <p class="install-guide__note">
+          Per prova in casa con <strong>HTTPS</strong> puoi usare
+          <a href="https://ngrok.com/download" target="_blank" rel="noopener">ngrok</a>
+          o pubblicare gratis su <a href="https://app.netlify.com/drop" target="_blank" rel="noopener">Netlify Drop</a>
+          e aprire quel link dal telefono: lì il pulsante con icona download funziona come previsto.
+        </p>
+      </section>
+
+      <section class="loc">
+        <p class="loc__city" id="locationName">—</p>
+        <p class="loc__sub" id="locationMeta"></p>
+      </section>
+
+      <section class="search-panel">
+        <form class="search-form" id="searchForm" autocomplete="off">
+          <label class="sr-only" for="cityInput">Cerca città</label>
+          <input type="search" id="cityInput" class="search-form__input" placeholder="Città…" />
+          <button type="submit" class="btn btn--primary">Cerca</button>
+        </form>
+        <button type="button" class="btn btn--ghost" id="btnGeo">Posizione</button>
+      </section>
+
+      <div class="skeleton" id="skeleton" aria-hidden="true"></div>
+
+      <div id="contentLoaded" hidden>
+        <div class="carousel" id="carousel">
+          <div class="carousel__viewport">
+            <div class="carousel__slide carousel__slide--active" data-slide="0">
+              <div class="hero">
+                <div class="hero__visual">
+                  <div class="hero__glow" aria-hidden="true"></div>
+                  <div class="hero__icon-wrap" id="heroIconWrap" role="img" aria-label=""></div>
+                </div>
+                <div class="hero__data">
+                  <p class="hero__label" id="currentDesc">—</p>
+                  <p class="hero__temp" id="currentTemp">—</p>
+                  <p class="hero__tagline" id="currentTagline">—</p>
+                </div>
+              </div>
+            </div>
+            <div class="carousel__slide" data-slide="1">
+              <ul class="stats">
+                <li class="stats__item"><span class="stats__label">Percepita</span><span class="stats__value" id="currentApparent">—</span></li>
+                <li class="stats__item"><span class="stats__label">Umidità</span><span class="stats__value" id="statHumidity">—</span></li>
+                <li class="stats__item"><span class="stats__label">Vento</span><span class="stats__value" id="statWind">—</span></li>
+                <li class="stats__item"><span class="stats__label">Direzione</span><span class="stats__value" id="statWindDir">—</span></li>
+                <li class="stats__item stats__item--wide"><span class="stats__label">Pressione</span><span class="stats__value" id="statPressure">—</span></li>
+              </ul>
+            </div>
+          </div>
+          <div class="carousel__dots" role="tablist" aria-label="Sezioni">
+            <button type="button" class="carousel__dot carousel__dot--active" data-go="0" role="tab" aria-selected="true" aria-label="Riepilogo"></button>
+            <button type="button" class="carousel__dot" data-go="1" role="tab" aria-selected="false" aria-label="Dettagli"></button>
+          </div>
+        </div>
+
+        <section class="forecast-block">
+          <div class="forecast-head">
+            <h2 class="forecast-head__title">Previsioni</h2>
+            <img src="assets/logo.png" alt="" class="forecast-head__logo" width="88" height="26" decoding="async" />
+          </div>
+          <div class="forecast-strip-wrap">
+            <div class="forecast-strip" id="forecastList"></div>
+          </div>
+        </section>
+
+        <div class="hearth">
+          <div class="hearth__embers" aria-hidden="true"></div>
+          <div class="hearth__inner">
+            <div class="hearth__stove" aria-hidden="true">
+              <svg class="stove-svg" viewBox="0 0 140 160" xmlns="http://www.w3.org/2000/svg">
+                <rect x="58" y="0" width="24" height="48" rx="2" fill="#1c1c1c"/>
+                <rect x="32" y="44" width="76" height="96" rx="6" fill="#9e2a2f"/>
+                <rect x="32" y="44" width="76" height="18" rx="6" fill="#7a1f24"/>
+                <rect x="42" y="62" width="56" height="58" rx="4" fill="#252525"/>
+                <ellipse cx="70" cy="88" rx="14" ry="22" fill="#ff7a18"/>
+                <ellipse cx="70" cy="92" rx="8" ry="14" fill="#ffcc4d"/>
+                <rect x="24" y="132" width="92" height="22" rx="4" fill="#3d3d3d"/>
+                <ellipse cx="45" cy="148" rx="4" ry="2" fill="#ff6b35" opacity="0.7"/>
+                <ellipse cx="95" cy="145" rx="3" ry="1.5" fill="#ff6b35" opacity="0.6"/>
+              </svg>
+            </div>
+            <div class="hearth__comfort">
+              <span class="hearth__comfort-label">Temperatura</span>
+              <span class="hearth__comfort-value" id="indoorTemp" title="Doppio clic per modificare">22°</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="offline-badge" id="offlineBadge" hidden>Dati in cache · offline</p>
+      <footer class="footer">
+        <small>Dati <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · La Nordica - Extraflame</small>
+      </footer>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+{
+  "name": "Meteo La Nordica Extraflame",
+  "short_name": "Meteo Nordica",
+  "description": "Widget meteo brandizzato La Nordica - Extraflame. Previsioni in tempo reale, temperatura, umidità, vento e forecast 5 giorni.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ebebed",
+  "orientation": "portrait-primary",
+  "lang": "it",
+  "icons": [
+    {
+      "src": "assets/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["weather", "utilities"],
+  "screenshots": [],
+  "prefer_related_applications": false
+}
