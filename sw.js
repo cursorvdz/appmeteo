@@ -1,5 +1,6 @@
 /* Meteo Nordica - cache shell per uso offline */
-const CACHE = 'meteo-nordica-shell-v2';
+const CACHE = 'meteo-nordica-shell-v9';
+const NETWORK_FIRST = ['./index.html', './app.js', './style.css'];
 const ASSETS = [
   './',
   './index.html',
@@ -38,6 +39,24 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
   if (url.origin === location.origin) {
+    const isShell = NETWORK_FIRST.some((p) => {
+      const name = p.replace('./', '');
+      return url.pathname.endsWith(name) || url.pathname.endsWith(`/${name}`);
+    });
+
+    if (isShell) {
+      event.respondWith(
+        fetch(request)
+          .then((res) => {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(request, copy)).catch(() => {});
+            return res;
+          })
+          .catch(() => caches.match(request).then((c) => c || caches.match('./index.html')))
+      );
+      return;
+    }
+
     event.respondWith(
       caches.match(request).then((cached) => cached || fetch(request).catch(() => caches.match('./index.html')))
     );

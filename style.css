@@ -196,6 +196,16 @@ a {
   align-items: center;
 }
 
+.btn--settings {
+  border-color: var(--brand-maroon);
+  color: var(--brand-maroon);
+  font-weight: 700;
+}
+
+.topbar__right .btn-icon:first-child {
+  flex-shrink: 0;
+}
+
 .search-form {
   display: flex;
   flex: 1;
@@ -568,6 +578,208 @@ a {
   font-variant-numeric: tabular-nums;
   cursor: default;
   user-select: none;
+}
+
+.fuel-card {
+  margin: 0 14px 14px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #fff9f6 0%, #fff 55%);
+  border: 1px solid #ecd9d4;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(109, 32, 40, 0.06);
+}
+
+.fuel-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.fuel-card__title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--brand-maroon);
+}
+
+.fuel-card__period {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.fuel-card__value {
+  margin: 0 0 6px;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.25;
+}
+
+.fuel-card__detail {
+  margin: 0 0 4px;
+  font-size: 0.88rem;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.env-benefits {
+  margin: 0 14px 14px;
+  padding: 16px;
+  background: linear-gradient(145deg, #e8f4fc 0%, #d4ebf7 100%);
+  border: 1px solid #b8d9ec;
+  border-radius: 16px;
+}
+
+.env-benefits[hidden] {
+  display: none !important;
+}
+
+.env-benefits__title {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a5f7a;
+}
+
+.env-benefits__period {
+  margin: 0 0 14px;
+  font-size: 0.72rem;
+  color: #3d7a94;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.env-benefits__item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 10px 12px 12px;
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 12px;
+  border: 1px solid rgba(184, 217, 236, 0.8);
+}
+
+.env-benefits__label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #2d6b85;
+  line-height: 1.25;
+  padding-right: 28px;
+}
+
+.env-benefits__value {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0d4a63;
+  line-height: 1.2;
+}
+
+.env-benefits__icon {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 1.25rem;
+  opacity: 0.85;
+}
+
+.env-benefits__disclaimer {
+  margin: 12px 0 0;
+  font-size: 0.65rem;
+  color: #4a7d94;
+  line-height: 1.35;
+}
+
+.settings-panel {
+  margin: 0 14px 12px;
+  padding: 14px 16px;
+  background: #fafafa;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+
+.settings-panel[hidden] {
+  display: none !important;
+}
+
+.settings-form {
+  padding: 0;
+}
+
+.settings-form__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.settings-form__title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--brand-maroon);
+}
+
+.settings-form__close {
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.settings-field input[type="number"],
+.settings-field select {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+.settings-field--radio {
+  border: none;
+  padding: 0;
+}
+
+.settings-field--radio legend {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.settings-field--radio label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 14px;
+  font-weight: 600;
+}
+
+.settings-field input[type="range"] {
+  width: 100%;
+}
+
+.settings-form__actions {
+  margin-top: 8px;
+}
+
+.settings-form__actions .btn {
+  width: 100%;
 }
 
 .offline-badge {

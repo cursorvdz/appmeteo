@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://api.open-meteo.com" />
   <link rel="preconnect" href="https://geocoding-api.open-meteo.com" />
   <title>Meteo La Nordica - Extraflame</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=9" />
 </head>
 <body>
   <div class="app">
@@ -21,6 +21,12 @@
       <header class="topbar">
         <h1 class="topbar__title">Meteo</h1>
         <div class="topbar__right">
+          <button type="button" class="btn-icon btn-icon--light" id="btnSettings" aria-label="Impostazioni casa" title="Impostazioni">
+            <svg class="icon-gear" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
           <button type="button" class="btn-text" id="btnInstallHelp" title="Guida installazione">Installa</button>
           <button type="button" class="btn-icon btn-icon--light" id="btnInstall" hidden aria-label="Installa app" title="Installa">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
@@ -56,6 +62,71 @@
           <button type="submit" class="btn btn--primary">Cerca</button>
         </form>
         <button type="button" class="btn btn--ghost" id="btnGeo">Posizione</button>
+        <button type="button" class="btn btn--ghost btn--settings" id="btnSettingsAlt">Impostazioni casa</button>
+      </section>
+
+      <section class="settings-panel" id="settingsPanel" hidden>
+        <form class="settings-form" id="settingsForm">
+          <div class="settings-form__head">
+            <h2 class="settings-form__title" id="settingsTitle">Impostazioni casa</h2>
+            <button type="button" class="settings-form__close" id="settingsClose" aria-label="Chiudi">×</button>
+          </div>
+          <label class="settings-field">
+            <span>Superficie (m²)</span>
+            <input type="number" id="houseM2" name="m2" min="20" max="500" step="1" required />
+          </label>
+          <label class="settings-field">
+            <span>Classe energetica</span>
+            <select id="houseClass" name="classe">
+              <option value="A4">A4</option>
+              <option value="A3">A3</option>
+              <option value="A2">A2</option>
+              <option value="A1">A1</option>
+              <option value="B">B</option>
+              <option value="C">C</option>
+              <option value="D">D</option>
+              <option value="E" selected>E</option>
+              <option value="F">F</option>
+              <option value="G">G</option>
+            </select>
+          </label>
+          <fieldset class="settings-field settings-field--radio">
+            <legend>Combustibile</legend>
+            <label><input type="radio" name="combustibile" value="pellet" checked /> Pellet</label>
+            <label><input type="radio" name="combustibile" value="legna" /> Legna</label>
+          </fieldset>
+          <label class="settings-field">
+            <span>Temperatura desiderata (°C)</span>
+            <input type="number" id="houseTemp" name="temp" min="16" max="26" step="1" value="22" />
+          </label>
+          <label class="settings-field">
+            <span>% superficie riscaldata</span>
+            <input type="range" id="housePerc" name="perc" min="50" max="100" step="5" value="100" />
+            <output id="housePercOut" for="housePerc">100%</output>
+          </label>
+          <label class="settings-field">
+            <span>Rendimento stufa</span>
+            <input type="range" id="houseEta" name="eta" min="70" max="95" step="1" value="88" />
+            <output id="houseEtaOut" for="houseEta">88%</output>
+          </label>
+          <label class="settings-field">
+            <span>Correzione consumo</span>
+            <input type="range" id="houseFactor" name="factor" min="80" max="120" step="5" value="100" />
+            <output id="houseFactorOut" for="houseFactor">100%</output>
+          </label>
+          <div class="settings-form__actions">
+            <button type="submit" class="btn btn--primary">Salva</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="fuel-card" id="fuelCard" aria-labelledby="fuelCardTitle">
+        <div class="fuel-card__head">
+          <h2 class="fuel-card__title" id="fuelCardTitle">Stima combustibile</h2>
+          <span class="fuel-card__period">Prossimi 30 giorni</span>
+        </div>
+        <p class="fuel-card__value" id="fuelEstimateMain">In attesa del meteo…</p>
+        <p class="fuel-card__detail" id="fuelEstimateDetail">Cerca una città o usa la posizione.</p>
       </section>
 
       <div class="skeleton" id="skeleton" aria-hidden="true"></div>
@@ -126,6 +197,17 @@
         </div>
       </div>
 
+      <section class="env-benefits" id="envBenefits" hidden aria-labelledby="envBenefitsTitle">
+        <h2 class="env-benefits__title" id="envBenefitsTitle">Vantaggi ambientali</h2>
+        <p class="env-benefits__period">Stima annua proiettata</p>
+        <div class="env-benefits__item">
+            <span class="env-benefits__label">Carbone risparmiato</span>
+            <span class="env-benefits__value" id="envCoal">—</span>
+            <span class="env-benefits__icon" aria-hidden="true">⛰️</span>
+          </div>
+        <p class="env-benefits__disclaimer">Proiezione annua da consumo stimato (30 gg → anno).</p>
+      </section>
+
       <p class="offline-badge" id="offlineBadge" hidden>Dati in cache · offline</p>
       <footer class="footer">
         <small>Dati <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · La Nordica - Extraflame</small>
@@ -135,6 +217,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-  <script src="app.js" defer></script>
+  <script src="app.js?v=9" defer></script>
 </body>
 </html>

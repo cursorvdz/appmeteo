@@ -26,5 +26,5 @@ Then open `http://localhost:8080/` in a browser. The app fetches weather data fr
 
 - The app uses the **Open-Meteo** geocoding and forecast APIs (`geocoding-api.open-meteo.com`, `api.open-meteo.com`). No authentication or API key is required.
 - Service Worker (`sw.js`) caches assets and API responses for offline use. It requires a **secure context** (HTTPS or localhost) to register.
-- State is persisted in `localStorage` under keys `meteo-nordica-v1` (weather cache) and `meteo-nordica-indoor` (indoor temperature preference).
+- State is persisted in `localStorage` under keys `meteo-nordica-v1` (weather cache), `meteo-nordica-indoor` (indoor temperature), and `meteo-nordica-house` (m², classe energetica, combustibile for fuel estimate).
 - The UI language is Italian.

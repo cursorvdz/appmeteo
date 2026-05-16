@@ -3,7 +3,42 @@
 
   const STORAGE_KEY = 'meteo-nordica-v1';
   const INDOOR_KEY = 'meteo-nordica-indoor';
+  const HOUSE_KEY = 'meteo-nordica-house';
   const GEO_TIMEOUT_MS = 12000;
+  const FUEL_DAYS = 30;
+  const FORECAST_API_DAYS = 16;
+  const FORECAST_UI_DAYS = 5;
+  const FUEL_RANGE_SPREAD = 0.15;
+  const PELLET_KWH_PER_KG = 4.8;
+  const WOOD_KWH_PER_KG = 4.0;
+  const COAL_KWH_PER_KG = 7.5;
+  const COAL_BOILER_ETA = 0.75;
+  const DAYS_PER_YEAR = 365;
+
+  const CLASS_K_HDD = {
+    A4: 0.006,
+    A3: 0.01,
+    A2: 0.014,
+    A1: 0.018,
+    B: 0.026,
+    C: 0.036,
+    D: 0.052,
+    E: 0.068,
+    F: 0.084,
+    G: 0.104,
+  };
+
+  const DEFAULT_HOUSE = {
+    m2: 90,
+    classe: 'E',
+    combustibile: 'pellet',
+    percRiscaldato: 1,
+    tempDesiderata: 22,
+    rendimento: 0.88,
+    fattore: 1,
+  };
+
+  let lastForecastData = null;
 
   const $ = (id) => document.getElementById(id);
 
@@ -35,6 +70,23 @@
     installGuideTitle: $('installGuideTitle'),
     btnInstallHelp: $('btnInstallHelp'),
     installGuideClose: $('installGuideClose'),
+    btnSettings: $('btnSettings'),
+    settingsPanel: $('settingsPanel'),
+    settingsForm: $('settingsForm'),
+    settingsClose: $('settingsClose'),
+    houseM2: $('houseM2'),
+    houseClass: $('houseClass'),
+    houseTemp: $('houseTemp'),
+    housePerc: $('housePerc'),
+    housePercOut: $('housePercOut'),
+    houseEta: $('houseEta'),
+    houseEtaOut: $('houseEtaOut'),
+    houseFactor: $('houseFactor'),
+    houseFactorOut: $('houseFactorOut'),
+    fuelEstimateMain: $('fuelEstimateMain'),
+    fuelEstimateDetail: $('fuelEstimateDetail'),
+    envBenefits: $('envBenefits'),
+    envCoal: $('envCoal'),
   };
 
   let deferredPrompt = null;
@@ -74,6 +126,231 @@
     if (!Number.isFinite(n)) return;
     localStorage.setItem(INDOOR_KEY, String(Math.round(n)));
     els.indoorTemp.textContent = `${Math.round(n)}°`;
+    const house = getHouseSettings();
+    house.tempDesiderata = Math.round(n);
+    saveHouseSettings(house);
+  }
+
+  function getHouseSettings() {
+    try {
+      const raw = localStorage.getItem(HOUSE_KEY);
+      const parsed = raw ? JSON.parse(raw) : {};
+      return { ...DEFAULT_HOUSE, ...parsed };
+    } catch {
+      return { ...DEFAULT_HOUSE };
+    }
+  }
+
+  function saveHouseSettings(house) {
+    try {
+      localStorage.setItem(HOUSE_KEY, JSON.stringify(house));
+    } catch (_) {}
+  }
+
+  function getClassK(classe) {
+    return CLASS_K_HDD[classe] ?? CLASS_K_HDD.E;
+  }
+
+  function dailyMeanTemp(daily, index) {
+    const mean = daily.temperature_2m_mean?.[index];
+    if (mean != null && Number.isFinite(mean)) return mean;
+    const max = daily.temperature_2m_max?.[index];
+    const min = daily.temperature_2m_min?.[index];
+    if (max != null && min != null) return (max + min) / 2;
+    return null;
+  }
+
+  function build30DayMeanTemps(daily) {
+    const fromApi = [];
+    const len = daily.time?.length ?? 0;
+    for (let i = 0; i < len; i++) {
+      const t = dailyMeanTemp(daily, i);
+      if (t != null) fromApi.push(t);
+    }
+    if (!fromApi.length) return [];
+
+    const fillValue =
+      fromApi.reduce((a, b) => a + b, 0) / fromApi.length;
+    const temps = fromApi.slice();
+    while (temps.length < FUEL_DAYS) {
+      temps.push(fillValue);
+    }
+    return temps.slice(0, FUEL_DAYS);
+  }
+
+  function computeFuelEstimate(daily, house) {
+    const m2 = Number(house.m2);
+    if (!Number.isFinite(m2) || m2 < 20) {
+      return { ok: false, reason: 'setup' };
+    }
+
+    const temps = build30DayMeanTemps(daily);
+    if (!temps.length) return { ok: false, reason: 'weather' };
+
+    const base = Number(house.tempDesiderata) || getIndoor();
+    const k = getClassK(house.classe);
+    const perc = Math.min(1, Math.max(0.5, Number(house.percRiscaldato) || 1));
+    const factor = Math.min(1.2, Math.max(0.8, Number(house.fattore) || 1));
+    const eta = Math.min(0.95, Math.max(0.5, Number(house.rendimento) || 0.85));
+    const isPellet = house.combustibile !== 'legna';
+    const kwhPerKg = isPellet ? PELLET_KWH_PER_KG : WOOD_KWH_PER_KG;
+
+    let totalHdd = 0;
+    let totalKwh = 0;
+    temps.forEach((t) => {
+      const hdd = Math.max(0, base - t);
+      totalHdd += hdd;
+      totalKwh += hdd * m2 * k * perc * factor;
+    });
+
+    if (totalHdd < 0.5) {
+      return {
+        ok: true,
+        low: true,
+        combustibile: isPellet ? 'pellet' : 'legna',
+        kgMin: 0,
+        kgMax: 0,
+        sacchi: 0,
+        totalKwh: 0,
+        totalHdd: Math.round(totalHdd * 10) / 10,
+        forecastDaysUsed: Math.min(FORECAST_API_DAYS, daily.time?.length ?? 0),
+      };
+    }
+
+    const kgCenter = totalKwh / (kwhPerKg * eta);
+    const kgMin = Math.max(0, Math.round(kgCenter * (1 - FUEL_RANGE_SPREAD)));
+    const kgMax = Math.max(kgMin + 1, Math.round(kgCenter * (1 + FUEL_RANGE_SPREAD)));
+    const sacchi = Math.ceil(kgCenter / 15);
+
+    return {
+      ok: true,
+      low: false,
+      combustibile: isPellet ? 'pellet' : 'legna',
+      kgMin,
+      kgMax,
+      sacchi,
+      totalKwh,
+      totalHdd: Math.round(totalHdd * 10) / 10,
+      forecastDaysUsed: Math.min(FORECAST_API_DAYS, daily.time?.length ?? 0),
+    };
+  }
+
+  function formatTonnes(t) {
+    if (!Number.isFinite(t) || t <= 0) return '—';
+    if (t < 0.01) return '< 0,01 t';
+    return `${t.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} t`;
+  }
+
+  function computeEnvBenefits(totalKwh30d) {
+    if (!Number.isFinite(totalKwh30d) || totalKwh30d <= 0) {
+      return { ok: false };
+    }
+    const kwhAnnual = totalKwh30d * (DAYS_PER_YEAR / FUEL_DAYS);
+    const kgCoal = kwhAnnual / (COAL_KWH_PER_KG * COAL_BOILER_ETA);
+    const tCoal = kgCoal / 1000;
+    return { ok: true, tCoal };
+  }
+
+  function renderEnvBenefits(fuelResult) {
+    if (!els.envBenefits) return;
+    if (!fuelResult?.ok || fuelResult.low || !fuelResult.totalKwh) {
+      els.envBenefits.hidden = true;
+      return;
+    }
+    const env = computeEnvBenefits(fuelResult.totalKwh);
+    if (!env.ok) {
+      els.envBenefits.hidden = true;
+      return;
+    }
+    els.envBenefits.hidden = false;
+    if (els.envCoal) els.envCoal.textContent = formatTonnes(env.tCoal);
+  }
+
+  function renderFuelEstimate(forecastData) {
+    if (!els.fuelEstimateMain) return;
+    const house = getHouseSettings();
+    const result = computeFuelEstimate(forecastData.daily, house);
+
+    if (!result.ok) {
+      if (result.reason === 'setup') {
+        els.fuelEstimateMain.textContent = 'Imposta la casa';
+        els.fuelEstimateDetail.textContent = 'Tocca ⚙ e inserisci m² e classe energetica.';
+      } else {
+        els.fuelEstimateMain.textContent = 'Meteo non disponibile';
+        els.fuelEstimateDetail.textContent = 'Riprova quando i dati sono caricati.';
+      }
+      renderEnvBenefits(null);
+      return;
+    }
+
+    if (result.low) {
+      els.fuelEstimateMain.textContent = 'Riscaldamento minimo';
+      els.fuelEstimateDetail.textContent =
+        'Nei prossimi 30 giorni il fabbisogno stimato è trascurabile.';
+      renderEnvBenefits(result);
+      return;
+    }
+
+    const label = result.combustibile === 'pellet' ? 'pellet' : 'legna';
+    els.fuelEstimateMain.textContent = `≈ ${result.kgMin}–${result.kgMax} kg di ${label}`;
+    if (result.combustibile === 'pellet') {
+      els.fuelEstimateDetail.textContent = `Circa ${result.sacchi} sacchi da 15 kg (stima centrale).`;
+    } else {
+      const center = Math.round((result.kgMin + result.kgMax) / 2);
+      els.fuelEstimateDetail.textContent = `Valore centrale indicativo: circa ${center} kg.`;
+    }
+    renderEnvBenefits(result);
+  }
+
+  function fillSettingsForm() {
+    const h = getHouseSettings();
+    els.houseM2.value = h.m2 ?? DEFAULT_HOUSE.m2;
+    els.houseClass.value = h.classe ?? 'E';
+    els.houseTemp.value = h.tempDesiderata ?? getIndoor();
+    const perc = Math.round((h.percRiscaldato ?? 1) * 100);
+    els.housePerc.value = String(perc);
+    els.housePercOut.textContent = `${perc}%`;
+    const etaPct = Math.round((h.rendimento ?? 0.88) * 100);
+    els.houseEta.value = String(etaPct);
+    els.houseEtaOut.textContent = `${etaPct}%`;
+    const facPct = Math.round((h.fattore ?? 1) * 100);
+    els.houseFactor.value = String(facPct);
+    els.houseFactorOut.textContent = `${facPct}%`;
+    const fuel = h.combustibile === 'legna' ? 'legna' : 'pellet';
+    const radio = els.settingsForm.querySelector(`input[name="combustibile"][value="${fuel}"]`);
+    if (radio) radio.checked = true;
+  }
+
+  function readSettingsForm() {
+    const fuelInput = els.settingsForm.querySelector('input[name="combustibile"]:checked');
+    return {
+      m2: parseFloat(els.houseM2.value),
+      classe: els.houseClass.value || 'E',
+      combustibile: fuelInput?.value === 'legna' ? 'legna' : 'pellet',
+      tempDesiderata: parseFloat(els.houseTemp.value),
+      percRiscaldato: parseInt(els.housePerc.value, 10) / 100,
+      rendimento: parseInt(els.houseEta.value, 10) / 100,
+      fattore: parseInt(els.houseFactor.value, 10) / 100,
+    };
+  }
+
+  function openSettings() {
+    if (!els.settingsPanel) return;
+    fillSettingsForm();
+    els.settingsPanel.hidden = false;
+    els.settingsPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function closeSettings() {
+    if (els.settingsPanel) els.settingsPanel.hidden = true;
+  }
+
+  function refreshFuelFromCache() {
+    const state = loadState();
+    if (state?.forecast?.daily) {
+      lastForecastData = state.forecast;
+      renderFuelEstimate(state.forecast);
+    }
   }
 
   function formatTempMain(n) {
@@ -238,11 +515,12 @@
         'weather_code',
         'temperature_2m_max',
         'temperature_2m_min',
+        'temperature_2m_mean',
         'precipitation_sum',
         'wind_speed_10m_max',
       ].join(','),
       timezone: 'Europe/Rome',
-      forecast_days: '5',
+      forecast_days: String(FORECAST_API_DAYS),
     });
     const url = `https://api.open-meteo.com/v1/forecast?${params}`;
     const res = await fetch(url);
@@ -285,8 +563,12 @@
 
     els.indoorTemp.textContent = `${getIndoor()}°`;
 
+    lastForecastData = data;
+    renderFuelEstimate(data);
+
     els.forecastList.innerHTML = '';
-    for (let i = 0; i < daily.time.length; i++) {
+    const uiDays = Math.min(FORECAST_UI_DAYS, daily.time.length);
+    for (let i = 0; i < uiDays; i++) {
       const code = daily.weather_code[i];
       const info = wmoIt(code);
       const col = document.createElement('div');
@@ -359,6 +641,49 @@
             : e.message || 'Geolocalizzazione fallita';
       showToast(msg);
     }
+  });
+
+  function bindSettingsOpen(el) {
+    if (el) el.addEventListener('click', openSettings);
+  }
+  bindSettingsOpen(els.btnSettings);
+  bindSettingsOpen(document.getElementById('btnSettingsAlt'));
+
+  if (els.settingsClose) els.settingsClose.addEventListener('click', closeSettings);
+
+  if (els.settingsForm) els.settingsForm.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const h = readSettingsForm();
+    if (!Number.isFinite(h.m2) || h.m2 < 20) {
+      showToast('Inserisci una superficie valida (min. 20 m²)');
+      return;
+    }
+    saveHouseSettings(h);
+    setIndoor(h.tempDesiderata);
+    closeSettings();
+    showToast('Impostazioni salvate');
+    if (lastForecastData) renderFuelEstimate(lastForecastData);
+  });
+
+  ['housePerc', 'houseEta', 'houseFactor'].forEach((id) => {
+    const input = els[id];
+    const out = els[`${id}Out`];
+    if (!input || !out) return;
+    input.addEventListener('input', () => {
+      out.textContent = `${input.value}%`;
+    });
+  });
+
+  if (els.settingsForm) els.settingsForm.querySelectorAll('input[name="combustibile"]').forEach((radio) => {
+    radio.addEventListener('change', () => {
+      if (radio.value === 'legna' && radio.checked) {
+        els.houseEta.value = '78';
+        els.houseEtaOut.textContent = '78%';
+      } else if (radio.value === 'pellet' && radio.checked) {
+        els.houseEta.value = '88';
+        els.houseEtaOut.textContent = '88%';
+      }
+    });
   });
 
   els.indoorTemp.addEventListener('dblclick', () => {
@@ -436,8 +761,9 @@
     if (outcome === 'dismissed') els.btnInstall.hidden = false;
   });
 
-  if (!window.isSecureContext) {
+  if (!window.isSecureContext && !sessionStorage.getItem('meteo-install-hint-seen')) {
     openInstallGuide('insecure');
+    sessionStorage.setItem('meteo-install-hint-seen', '1');
   }
 
   function initCarousel() {
@@ -460,8 +786,13 @@
   }
 
   initCarousel();
+  saveHouseSettings(getHouseSettings());
+  refreshFuelFromCache();
 
   if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then((regs) => {
+      regs.forEach((r) => r.update());
+    });
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js').catch(() => {});
     });
