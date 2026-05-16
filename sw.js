@@ -1,5 +1,5 @@
 /* Meteo Nordica - cache shell per uso offline */
-const CACHE = 'meteo-nordica-shell-v11';
+const CACHE = 'meteo-nordica-shell-v19';
 const NETWORK_FIRST = ['./index.html', './app.js', './style.css'];
 const ASSETS = [
   './',

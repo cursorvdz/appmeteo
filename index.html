@@ -13,25 +13,26 @@
   <link rel="preconnect" href="https://api.open-meteo.com" />
   <link rel="preconnect" href="https://geocoding-api.open-meteo.com" />
   <title>Meteo La Nordica - Extraflame</title>
-  <link rel="stylesheet" href="style.css?v=11" />
+  <link rel="stylesheet" href="style.css?v=19" />
 </head>
 <body>
   <div class="app">
     <div class="shell" id="shell">
       <header class="topbar">
-        <h1 class="topbar__title">Meteo</h1>
+        <div class="topbar__brand">
+          <img src="assets/logo.png" alt="La Nordica Extraflame" class="topbar__logo" width="120" height="36" decoding="async" />
+          <h1 class="topbar__title">Meteo</h1>
+        </div>
         <div class="topbar__right">
-          <button type="button" class="btn-icon btn-icon--light" id="btnSettings" aria-label="Impostazioni casa" title="Impostazioni">
+          <button type="button" class="btn-icon btn-icon--light" id="btnSettings" aria-label="Cerca città e strumenti" title="Cerca / impostazioni" aria-expanded="false" aria-controls="searchPanel">
             <svg class="icon-gear" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
               <circle cx="12" cy="12" r="3"/>
             </svg>
           </button>
-          <button type="button" class="btn-text" id="btnInstallHelp" title="Guida installazione">Installa</button>
           <button type="button" class="btn-icon btn-icon--light" id="btnInstall" hidden aria-label="Installa app" title="Installa">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
           </button>
-          <img src="assets/logo.png" alt="La Nordica Extraflame" class="topbar__logo" width="120" height="36" />
         </div>
       </header>
 
@@ -55,12 +56,25 @@
         <p class="loc__sub" id="locationMeta"></p>
       </section>
 
-      <section class="search-panel">
-        <form class="search-form" id="searchForm" autocomplete="off">
-          <label class="sr-only" for="cityInput">Cerca città</label>
-          <input type="search" id="cityInput" class="search-form__input" placeholder="Città…" />
-          <button type="submit" class="btn btn--primary">Cerca</button>
-        </form>
+      <section class="search-panel" id="searchPanel" hidden>
+        <div class="search-block">
+          <form class="search-form" id="searchForm" autocomplete="off">
+            <label class="sr-only" for="cityInput">Cerca città</label>
+            <input
+              type="search"
+              id="cityInput"
+              class="search-form__input"
+              placeholder="Città o comune…"
+              autocomplete="off"
+              aria-autocomplete="list"
+              aria-controls="searchResults"
+              aria-expanded="false"
+            />
+            <button type="submit" class="btn btn--primary">Cerca</button>
+          </form>
+          <p class="search-feedback" id="searchFeedback" hidden role="status" aria-live="polite"></p>
+          <ul class="search-results" id="searchResults" hidden role="listbox" aria-label="Risultati ricerca"></ul>
+        </div>
         <button type="button" class="btn btn--ghost" id="btnGeo">Posizione</button>
         <button type="button" class="btn btn--ghost btn--settings" id="btnSettingsAlt">Impostazioni casa</button>
       </section>
@@ -123,7 +137,7 @@
       <section class="fuel-card" id="fuelCard" aria-labelledby="fuelCardTitle">
         <div class="fuel-card__head">
           <h2 class="fuel-card__title" id="fuelCardTitle">Stima combustibile</h2>
-          <span class="fuel-card__period">Prossimi 30 giorni</span>
+          <span class="fuel-card__period">Prossimi 16 giorni (previsione Open-Meteo)</span>
         </div>
         <p class="fuel-card__value" id="fuelEstimateMain">In attesa del meteo…</p>
         <p class="fuel-card__detail" id="fuelEstimateDetail">Cerca una città o usa la posizione.</p>
@@ -136,14 +150,14 @@
           <div class="carousel__viewport">
             <div class="carousel__slide carousel__slide--active" data-slide="0">
               <div class="hero">
-                <div class="hero__visual">
-                  <div class="hero__glow" aria-hidden="true"></div>
-                  <div class="hero__icon-wrap" id="heroIconWrap" role="img" aria-label=""></div>
-                </div>
-                <div class="hero__data">
-                  <p class="hero__label" id="currentDesc">—</p>
-                  <p class="hero__temp" id="currentTemp">—</p>
-                  <p class="hero__tagline" id="currentTagline">—</p>
+                <div class="hero-carousel" id="heroCarousel">
+                  <button type="button" class="hero-carousel__btn hero-carousel__btn--prev" id="heroPrev" aria-label="Previsione precedente" hidden>
+                    <span aria-hidden="true">‹</span>
+                  </button>
+                  <div class="hero-timeline" id="heroTimeline" aria-label="Previsioni nelle prossime ore" tabindex="0"></div>
+                  <button type="button" class="hero-carousel__btn hero-carousel__btn--next" id="heroNext" aria-label="Previsione successiva" hidden>
+                    <span aria-hidden="true">›</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -182,7 +196,7 @@
             <span class="env-benefits__value" id="envCoal">—</span>
             <span class="env-benefits__icon" aria-hidden="true">⛰️</span>
           </div>
-        <p class="env-benefits__disclaimer">Proiezione annua da consumo stimato (30 gg → anno).</p>
+        <p class="env-benefits__disclaimer">Proiezione annua da consumo stimato (fino a 16 gg di previsione → anno).</p>
       </section>
 
       <p class="offline-badge" id="offlineBadge" hidden>Dati in cache · offline</p>
@@ -194,6 +208,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-  <script src="app.js?v=11" defer></script>
+  <script src="app.js?v=19" defer></script>
 </body>
 </html>

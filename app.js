@@ -5,9 +5,10 @@
   const INDOOR_KEY = 'meteo-nordica-indoor';
   const HOUSE_KEY = 'meteo-nordica-house';
   const GEO_TIMEOUT_MS = 12000;
-  const FUEL_DAYS = 30;
   const FORECAST_API_DAYS = 16;
   const FORECAST_UI_DAYS = 5;
+  const HERO_STEP_HOURS = 4;
+  const HERO_MAX_SLOTS = 7;
   const FUEL_RANGE_SPREAD = 0.15;
   const PELLET_KWH_PER_KG = 4.8;
   const WOOD_KWH_PER_KG = 4.0;
@@ -45,17 +46,18 @@
   const els = {
     searchForm: $('searchForm'),
     cityInput: $('cityInput'),
+    searchFeedback: $('searchFeedback'),
+    searchResults: $('searchResults'),
     btnGeo: $('btnGeo'),
     btnInstall: $('btnInstall'),
     locationName: $('locationName'),
     locationMeta: $('locationMeta'),
     skeleton: $('skeleton'),
     contentLoaded: $('contentLoaded'),
-    heroIconWrap: $('heroIconWrap'),
+    heroTimeline: $('heroTimeline'),
+    heroPrev: $('heroPrev'),
+    heroNext: $('heroNext'),
     forecastList: $('forecastList'),
-    currentTemp: $('currentTemp'),
-    currentDesc: $('currentDesc'),
-    currentTagline: $('currentTagline'),
     currentApparent: $('currentApparent'),
     statHumidity: $('statHumidity'),
     statWind: $('statWind'),
@@ -67,9 +69,9 @@
     installGuideLead: $('installGuideLead'),
     installGuideSteps: $('installGuideSteps'),
     installGuideTitle: $('installGuideTitle'),
-    btnInstallHelp: $('btnInstallHelp'),
     installGuideClose: $('installGuideClose'),
     btnSettings: $('btnSettings'),
+    searchPanel: $('searchPanel'),
     settingsPanel: $('settingsPanel'),
     settingsForm: $('settingsForm'),
     settingsClose: $('settingsClose'),
@@ -158,22 +160,14 @@
     return null;
   }
 
-  function build30DayMeanTemps(daily) {
-    const fromApi = [];
-    const len = daily.time?.length ?? 0;
+  function buildForecastMeanTemps(daily) {
+    const temps = [];
+    const len = Math.min(FORECAST_API_DAYS, daily.time?.length ?? 0);
     for (let i = 0; i < len; i++) {
       const t = dailyMeanTemp(daily, i);
-      if (t != null) fromApi.push(t);
+      if (t != null) temps.push(t);
     }
-    if (!fromApi.length) return [];
-
-    const fillValue =
-      fromApi.reduce((a, b) => a + b, 0) / fromApi.length;
-    const temps = fromApi.slice();
-    while (temps.length < FUEL_DAYS) {
-      temps.push(fillValue);
-    }
-    return temps.slice(0, FUEL_DAYS);
+    return temps;
   }
 
   function computeFuelEstimate(daily, house) {
@@ -182,7 +176,7 @@
       return { ok: false, reason: 'setup' };
     }
 
-    const temps = build30DayMeanTemps(daily);
+    const temps = buildForecastMeanTemps(daily);
     if (!temps.length) return { ok: false, reason: 'weather' };
 
     const base = Number(house.tempDesiderata) || getIndoor();
@@ -211,7 +205,7 @@
         sacchi: 0,
         totalKwh: 0,
         totalHdd: Math.round(totalHdd * 10) / 10,
-        forecastDaysUsed: Math.min(FORECAST_API_DAYS, daily.time?.length ?? 0),
+        daysUsed: temps.length,
       };
     }
 
@@ -229,7 +223,7 @@
       sacchi,
       totalKwh,
       totalHdd: Math.round(totalHdd * 10) / 10,
-      forecastDaysUsed: Math.min(FORECAST_API_DAYS, daily.time?.length ?? 0),
+      daysUsed: temps.length,
     };
   }
 
@@ -239,11 +233,11 @@
     return `${t.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} t`;
   }
 
-  function computeEnvBenefits(totalKwh30d) {
-    if (!Number.isFinite(totalKwh30d) || totalKwh30d <= 0) {
+  function computeEnvBenefits(totalKwhPeriod, daysUsed) {
+    if (!Number.isFinite(totalKwhPeriod) || totalKwhPeriod <= 0 || !daysUsed) {
       return { ok: false };
     }
-    const kwhAnnual = totalKwh30d * (DAYS_PER_YEAR / FUEL_DAYS);
+    const kwhAnnual = totalKwhPeriod * (DAYS_PER_YEAR / daysUsed);
     const kgCoal = kwhAnnual / (COAL_KWH_PER_KG * COAL_BOILER_ETA);
     const tCoal = kgCoal / 1000;
     return { ok: true, tCoal };
@@ -255,7 +249,7 @@
       els.envBenefits.hidden = true;
       return;
     }
-    const env = computeEnvBenefits(fuelResult.totalKwh);
+    const env = computeEnvBenefits(fuelResult.totalKwh, fuelResult.daysUsed);
     if (!env.ok) {
       els.envBenefits.hidden = true;
       return;
@@ -266,6 +260,12 @@
 
   function renderFuelEstimate(forecastData) {
     if (!els.fuelEstimateMain) return;
+    if (!forecastData?.daily) {
+      els.fuelEstimateMain.textContent = 'Meteo non disponibile';
+      els.fuelEstimateDetail.textContent = 'Riprova quando i dati sono caricati.';
+      renderEnvBenefits(null);
+      return;
+    }
     const house = getHouseSettings();
     const result = computeFuelEstimate(forecastData.daily, house);
 
@@ -283,8 +283,7 @@
 
     if (result.low) {
       els.fuelEstimateMain.textContent = 'Riscaldamento minimo';
-      els.fuelEstimateDetail.textContent =
-        'Nei prossimi 30 giorni il fabbisogno stimato è trascurabile.';
+      els.fuelEstimateDetail.textContent = `Nei prossimi ${result.daysUsed} giorni di previsione il fabbisogno stimato è trascurabile.`;
       renderEnvBenefits(result);
       return;
     }
@@ -332,8 +331,29 @@
     };
   }
 
+  function closeSearchPanel() {
+    if (els.searchPanel) els.searchPanel.hidden = true;
+    if (els.btnSettings) els.btnSettings.setAttribute('aria-expanded', 'false');
+    closeSettings();
+  }
+
+  function toggleSearchPanel() {
+    if (!els.searchPanel) return;
+    const opening = els.searchPanel.hidden;
+    if (opening) {
+      els.searchPanel.hidden = false;
+      if (els.btnSettings) els.btnSettings.setAttribute('aria-expanded', 'true');
+      els.searchPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      window.requestAnimationFrame(() => els.cityInput?.focus());
+    } else {
+      closeSearchPanel();
+    }
+  }
+
   function openSettings() {
     if (!els.settingsPanel) return;
+    if (els.searchPanel) els.searchPanel.hidden = false;
+    if (els.btnSettings) els.btnSettings.setAttribute('aria-expanded', 'true');
     fillSettingsForm();
     els.settingsPanel.hidden = false;
     els.settingsPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -433,33 +453,341 @@
     els.locationMeta.textContent = `${dateStr} · agg. ${timeStr}`;
   }
 
-  function renderHeroIcon(code, desc) {
-    const wrap = els.heroIconWrap;
+  function heroIconHtml(code) {
     const w = wmoIt(code);
-    wrap.setAttribute('aria-label', desc);
     if (w.preferFlame) {
-      wrap.classList.add('hero__icon-wrap--flame');
-      wrap.innerHTML = getFlameSvg();
-    } else {
-      wrap.classList.remove('hero__icon-wrap--flame');
-      wrap.innerHTML = `<span class="hero__emoji">${w.icon}</span>`;
+      return `<span class="hero-slot__icon hero-slot__icon--flame" role="img" aria-label="${w.desc}">${getFlameSvg()}</span>`;
     }
+    return `<span class="hero-slot__icon" role="img" aria-label="${w.desc}">${w.icon}</span>`;
   }
 
-  async function geocode(name) {
-    const q = encodeURIComponent(name.trim());
-    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${q}&count=5&language=it&format=json`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('Ricerca non disponibile');
-    const data = await res.json();
-    if (!data.results?.length) throw new Error('Località non trovata');
-    const r = data.results[0];
+  function formatClock(date) {
+    return date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function isSameCalendarDay(a, b) {
+    return (
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate()
+    );
+  }
+
+  function dayPrefixFor(date, now) {
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    if (isSameCalendarDay(date, now)) return '';
+    if (isSameCalendarDay(date, tomorrow)) return 'Domani ';
+    return `${date.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric' })} `;
+  }
+
+  function periodLabelItalian(date) {
+    const h = date.getHours();
+    if (h >= 6 && h < 12) return 'Mattina';
+    if (h >= 12 && h < 18) return 'Pomeriggio';
+    if (h >= 18 && h < 23) return 'Sera';
+    return 'Notte';
+  }
+
+  function findClosestHourlyIndex(times, targetMs) {
+    let best = -1;
+    let bestDiff = Infinity;
+    for (let i = 0; i < times.length; i++) {
+      const diff = Math.abs(times[i].getTime() - targetMs);
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        best = i;
+      }
+    }
+    return best;
+  }
+
+  function slotTagline(slot) {
+    const parts = [`Percepita ${formatTempMain(slot.apparent)}`];
+    if (slot.humidity != null) parts.push(`Umidità ${Math.round(slot.humidity)}%`);
+    return parts.join(' · ');
+  }
+
+  function buildHeroSlots(data) {
+    const cur = data.current;
+    const wNow = wmoIt(cur.weather_code);
+    const now = new Date();
+    const slots = [
+      {
+        label: 'Ora',
+        timeLabel: formatClock(now),
+        desc: wNow.desc,
+        code: cur.weather_code,
+        temp: cur.temperature_2m,
+        apparent: cur.apparent_temperature,
+        humidity: cur.relative_humidity_2m,
+        isNow: true,
+      },
+    ];
+
+    const hourly = data.hourly;
+    if (!hourly?.time?.length) return slots;
+
+    const times = hourly.time.map((iso) => new Date(iso));
+    const used = new Set();
+    const nowMs = now.getTime();
+
+    for (let step = 1; step < HERO_MAX_SLOTS; step++) {
+      const targetMs = nowMs + step * HERO_STEP_HOURS * 3600000;
+      const idx = findClosestHourlyIndex(times, targetMs);
+      if (idx < 0 || used.has(idx)) continue;
+      used.add(idx);
+      const when = times[idx];
+      const w = wmoIt(hourly.weather_code[idx]);
+      slots.push({
+        label: periodLabelItalian(when),
+        timeLabel: `${dayPrefixFor(when, now)}${formatClock(when)}`,
+        desc: w.desc,
+        code: hourly.weather_code[idx],
+        temp: hourly.temperature_2m[idx],
+        apparent: hourly.apparent_temperature[idx],
+        humidity: hourly.relative_humidity_2m[idx],
+        isNow: false,
+      });
+    }
+
+    return slots;
+  }
+
+  function renderHeroTimeline(data) {
+    const root = els.heroTimeline;
+    if (!root) return;
+    const slots = buildHeroSlots(data);
+    root.replaceChildren();
+
+    slots.forEach((slot) => {
+      const card = document.createElement('article');
+      card.className = `hero-slot${slot.isNow ? ' hero-slot--now' : ''}`;
+
+      const visual = document.createElement('div');
+      visual.className = 'hero-slot__visual';
+      visual.innerHTML = heroIconHtml(slot.code);
+
+      const body = document.createElement('div');
+      body.className = 'hero-slot__body';
+
+      const head = document.createElement('p');
+      head.className = 'hero-slot__head';
+      head.textContent = `${slot.label} · ${slot.timeLabel}`;
+
+      const desc = document.createElement('p');
+      desc.className = 'hero-slot__desc';
+      desc.textContent = slot.desc.toLowerCase();
+
+      const temp = document.createElement('p');
+      temp.className = 'hero-slot__temp';
+      temp.textContent = formatTempMain(slot.temp);
+
+      const meta = document.createElement('p');
+      meta.className = 'hero-slot__meta';
+      meta.textContent = slotTagline(slot);
+
+      body.append(head, desc, temp, meta);
+      card.append(visual, body);
+      root.appendChild(card);
+    });
+
+    setupHeroCarouselNav();
+  }
+
+  function setupHeroCarouselNav() {
+    const track = els.heroTimeline;
+    const prev = els.heroPrev;
+    const next = els.heroNext;
+    if (!track || !prev || !next) return;
+
+    const getSlots = () => [...track.querySelectorAll('.hero-slot')];
+
+    function activeIndex() {
+      const cards = getSlots();
+      if (!cards.length) return 0;
+      const center = track.scrollLeft + track.clientWidth / 2;
+      let best = 0;
+      let bestDist = Infinity;
+      cards.forEach((card, i) => {
+        const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+        const dist = Math.abs(cardCenter - center);
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = i;
+        }
+      });
+      return best;
+    }
+
+    function updateButtons() {
+      const cards = getSlots();
+      const multi = cards.length > 1;
+      prev.hidden = !multi;
+      next.hidden = !multi;
+      if (!multi) return;
+      const idx = activeIndex();
+      prev.disabled = idx <= 0;
+      next.disabled = idx >= cards.length - 1;
+    }
+
+    function goTo(index) {
+      const cards = getSlots();
+      const i = Math.min(cards.length - 1, Math.max(0, index));
+      cards[i]?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+
+    prev.onclick = () => goTo(activeIndex() - 1);
+    next.onclick = () => goTo(activeIndex() + 1);
+
+    track.onscroll = () => {
+      window.requestAnimationFrame(updateButtons);
+    };
+
+    window.requestAnimationFrame(() => {
+      track.scrollLeft = 0;
+      updateButtons();
+    });
+  }
+
+  let searchDebounceTimer = null;
+
+  function escapeHtml(text) {
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function placeFromGeocodeResult(r) {
     return {
       lat: r.latitude,
       lon: r.longitude,
       label: [r.name, r.admin1, r.country].filter(Boolean).join(', '),
       source: 'search',
     };
+  }
+
+  async function fetchGeocodeResults(name, { italyOnly = true } = {}) {
+    const trimmed = name.trim();
+    if (!trimmed) return [];
+    const params = new URLSearchParams({
+      name: trimmed,
+      count: '8',
+      language: 'it',
+      format: 'json',
+    });
+    if (italyOnly) params.set('country', 'IT');
+    const url = `https://geocoding-api.open-meteo.com/v1/search?${params}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Ricerca non disponibile');
+    const data = await res.json();
+    return data.results ?? [];
+  }
+
+  function setSearchFeedback(message, type) {
+    const el = els.searchFeedback;
+    if (!el) return;
+    if (!message) {
+      el.hidden = true;
+      el.textContent = '';
+      el.className = 'search-feedback';
+      return;
+    }
+    el.hidden = false;
+    el.textContent = message;
+    el.className = `search-feedback search-feedback--${type || 'info'}`;
+  }
+
+  function hideSearchResults() {
+    if (!els.searchResults) return;
+    els.searchResults.hidden = true;
+    els.searchResults.replaceChildren();
+    if (els.cityInput) els.cityInput.setAttribute('aria-expanded', 'false');
+  }
+
+  function renderSearchResults(results) {
+    const ul = els.searchResults;
+    if (!ul) return;
+    ul.replaceChildren();
+    if (!results.length) {
+      hideSearchResults();
+      return;
+    }
+    results.forEach((r) => {
+      const li = document.createElement('li');
+      li.setAttribute('role', 'presentation');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'search-results__item';
+      btn.setAttribute('role', 'option');
+      const meta = [r.admin1, r.country].filter(Boolean).join(' · ');
+      btn.innerHTML = `<span class="search-results__name">${escapeHtml(r.name)}</span>${
+        meta ? `<span class="search-results__meta">${escapeHtml(meta)}</span>` : ''
+      }`;
+      btn.addEventListener('click', () => {
+        selectSearchPlace(placeFromGeocodeResult(r));
+      });
+      li.appendChild(btn);
+      ul.appendChild(li);
+    });
+    ul.hidden = false;
+    if (els.cityInput) els.cityInput.setAttribute('aria-expanded', 'true');
+  }
+
+  async function selectSearchPlace(place) {
+    hideSearchResults();
+    setSearchFeedback('');
+    closeSearchPanel();
+    els.cityInput.value = place.label.split(',')[0] || place.label;
+    await load(place, { useCacheOnError: true });
+  }
+
+  async function runCitySearch({ autoPickSingle = false } = {}) {
+    const name = els.cityInput.value.trim();
+    if (!name) {
+      setSearchFeedback('Inserisci il nome di una città o comune.', 'warn');
+      hideSearchResults();
+      return;
+    }
+
+    setSearchFeedback('Ricerca in corso…', 'info');
+    hideSearchResults();
+
+    try {
+      let results = await fetchGeocodeResults(name, { italyOnly: true });
+      let abroad = false;
+
+      if (!results.length) {
+        results = await fetchGeocodeResults(name, { italyOnly: false });
+        abroad = results.length > 0;
+      }
+
+      if (!results.length) {
+        setSearchFeedback(
+          `Nessuna località trovata per «${name}». Controlla l’ortografia o prova il nome del comune.`,
+          'error'
+        );
+        return;
+      }
+
+      if (autoPickSingle && results.length === 1) {
+        await selectSearchPlace(placeFromGeocodeResult(results[0]));
+        return;
+      }
+
+      if (abroad) {
+        setSearchFeedback('Nessun risultato in Italia. Seleziona una località dall’elenco:', 'warn');
+      } else if (results.length === 1) {
+        setSearchFeedback('1 risultato — tocca per confermare:', 'info');
+      } else {
+        setSearchFeedback(`${results.length} risultati — scegli il comune corretto:`, 'info');
+      }
+      renderSearchResults(results);
+    } catch (e) {
+      setSearchFeedback(e.message || 'Ricerca non disponibile. Riprova.', 'error');
+    }
   }
 
   function getPosition() {
@@ -517,6 +845,12 @@
         'precipitation_sum',
         'wind_speed_10m_max',
       ].join(','),
+      hourly: [
+        'temperature_2m',
+        'apparent_temperature',
+        'relative_humidity_2m',
+        'weather_code',
+      ].join(','),
       timezone: 'Europe/Rome',
       forecast_days: String(FORECAST_API_DAYS),
     });
@@ -526,32 +860,15 @@
     return res.json();
   }
 
-  function taglineFromCurrent(cur, w) {
-    const p0 = cur?.precip_hint;
-    const parts = [
-      `Percepita ${formatTempMain(cur.apparent_temperature)}`,
-      `Umidità ${cur.relative_humidity_2m}%`,
-    ];
-    if (p0 != null && p0 > 2) parts.push('Pioggia prevista oggi');
-    else if (w.desc.includes('Piogg') || w.desc.includes('Rovesci')) parts.push('Porta ombrello');
-    return parts.join(' · ');
-  }
-
   function render(data, place) {
     const cur = data.current;
-    const w = wmoIt(cur.weather_code);
 
     els.locationName.textContent = place.label.split(',')[0] || place.label;
     updateLocationMeta();
 
-    renderHeroIcon(cur.weather_code, w.desc);
-    els.currentDesc.textContent = w.desc.toLowerCase();
-    els.currentTemp.textContent = formatTempMain(cur.temperature_2m);
+    renderHeroTimeline(data);
 
     const daily = data.daily;
-    const pToday = daily?.precipitation_sum?.[0];
-    const curWithHint = { ...cur, precip_hint: pToday };
-    els.currentTagline.textContent = taglineFromCurrent(curWithHint, w);
 
     els.currentApparent.textContent = formatTempMain(cur.apparent_temperature);
     els.statHumidity.textContent = `${cur.relative_humidity_2m}%`;
@@ -611,18 +928,23 @@
 
   els.searchForm.addEventListener('submit', async (ev) => {
     ev.preventDefault();
-    const name = els.cityInput.value;
-    if (!name.trim()) {
-      showToast('Inserisci una città');
-      return;
-    }
-    try {
-      const place = await geocode(name);
-      await load(place, { useCacheOnError: true });
-    } catch (e) {
-      showToast(e.message || 'Ricerca fallita');
-    }
+    await runCitySearch({ autoPickSingle: true });
   });
+
+  if (els.cityInput) {
+    els.cityInput.addEventListener('input', () => {
+      clearTimeout(searchDebounceTimer);
+      const q = els.cityInput.value.trim();
+      if (q.length < 2) {
+        hideSearchResults();
+        setSearchFeedback('');
+        return;
+      }
+      searchDebounceTimer = setTimeout(() => {
+        runCitySearch({ autoPickSingle: false });
+      }, 400);
+    });
+  }
 
   els.btnGeo.addEventListener('click', async () => {
     try {
@@ -639,11 +961,12 @@
     }
   });
 
-  function bindSettingsOpen(el) {
-    if (el) el.addEventListener('click', openSettings);
+  if (els.btnSettings) {
+    els.btnSettings.setAttribute('aria-expanded', 'false');
+    els.btnSettings.setAttribute('aria-controls', 'searchPanel');
+    els.btnSettings.addEventListener('click', toggleSearchPanel);
   }
-  bindSettingsOpen(els.btnSettings);
-  bindSettingsOpen(document.getElementById('btnSettingsAlt'));
+  if (els.btnSettingsAlt) els.btnSettingsAlt.addEventListener('click', openSettings);
 
   if (els.settingsClose) els.settingsClose.addEventListener('click', closeSettings);
 
@@ -714,12 +1037,7 @@
     els.installGuide.hidden = true;
   }
 
-  els.btnInstallHelp.addEventListener('click', () => {
-    if (window.isSecureContext) openInstallGuide('secure');
-    else openInstallGuide('insecure');
-  });
-
-  els.installGuideClose.addEventListener('click', closeInstallGuide);
+  if (els.installGuideClose) els.installGuideClose.addEventListener('click', closeInstallGuide);
 
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
@@ -731,8 +1049,8 @@
     if (!deferredPrompt) {
       showToast(
         window.isSecureContext
-          ? 'Usa il menu del browser (⋮) → Installa app, oppure tocca “Installa” in alto per la guida.'
-          : 'Serve HTTPS. Tocca “Installa” in alto per le istruzioni.'
+          ? 'Usa il menu del browser (⋮) → Installa app.'
+          : 'Per installare serve HTTPS (es. meteolanordica.netlify.app).'
       );
       openInstallGuide(window.isSecureContext ? 'secure' : 'insecure');
       return;
