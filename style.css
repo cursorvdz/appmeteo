@@ -6,9 +6,6 @@
   --text: #1a1a1a;
   --text-muted: #5c5c5c;
   --line: #e0e0e4;
-  --hearth: #3a3a3e;
-  --hearth-deep: #2a2a2d;
-  --ember: #ff6b35;
   --radius-card: 20px;
   --radius-pill: 12px;
   font-family: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -208,14 +205,15 @@ a {
 
 .search-form {
   display: flex;
-  flex: 1;
-  min-width: 0;
+  flex: 1 1 100%;
+  width: 100%;
   gap: 8px;
 }
 
 .search-form__input {
-  flex: 1;
-  min-width: 0;
+  flex: 1 1 auto;
+  min-width: 10rem;
+  width: 100%;
   padding: 10px 12px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--line);
@@ -510,74 +508,6 @@ a {
   color: var(--text-muted);
   margin-top: 2px;
   font-variant-numeric: tabular-nums;
-}
-
-.hearth {
-  position: relative;
-  background: linear-gradient(180deg, var(--hearth) 0%, var(--hearth-deep) 100%);
-  border-radius: 28px 28px var(--radius-card) var(--radius-card);
-  margin-top: -12px;
-  padding: 28px 18px 22px;
-  color: #fff;
-  overflow: hidden;
-}
-
-.hearth__embers {
-  position: absolute;
-  right: 12%;
-  bottom: 18px;
-  width: 80px;
-  height: 40px;
-  background:
-    radial-gradient(circle at 20% 80%, var(--ember) 0%, transparent 35%),
-    radial-gradient(circle at 60% 90%, var(--ember) 0%, transparent 30%),
-    radial-gradient(circle at 85% 70%, #ffaa44 0%, transparent 25%);
-  opacity: 0.55;
-  pointer-events: none;
-}
-
-.hearth__inner {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.hearth__stove {
-  flex: 0 0 100px;
-}
-
-.stove-svg {
-  width: 100px;
-  height: auto;
-  display: block;
-  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.35));
-}
-
-.hearth__comfort {
-  text-align: right;
-  padding-bottom: 6px;
-}
-
-.hearth__comfort-label {
-  display: block;
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  opacity: 0.85;
-  margin-bottom: 4px;
-}
-
-.hearth__comfort-value {
-  font-size: 2.5rem;
-  font-weight: 800;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  cursor: default;
-  user-select: none;
 }
 
 .fuel-card {

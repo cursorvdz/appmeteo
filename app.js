@@ -61,7 +61,6 @@
     statWind: $('statWind'),
     statWindDir: $('statWindDir'),
     statPressure: $('statPressure'),
-    indoorTemp: $('indoorTemp'),
     offlineBadge: $('offlineBadge'),
     toast: $('toast'),
     installGuide: $('installGuide'),
@@ -122,10 +121,9 @@
     return Number.isFinite(n) ? Math.round(n) : 22;
   }
 
-  function setIndoor(n) {
+  function syncIndoorTemp(n) {
     if (!Number.isFinite(n)) return;
     localStorage.setItem(INDOOR_KEY, String(Math.round(n)));
-    els.indoorTemp.textContent = `${Math.round(n)}°`;
     const house = getHouseSettings();
     house.tempDesiderata = Math.round(n);
     saveHouseSettings(house);
@@ -561,8 +559,6 @@
     els.statWindDir.textContent = windDirIt(cur.wind_direction_10m);
     els.statPressure.textContent = `${Math.round(cur.surface_pressure)} hPa`;
 
-    els.indoorTemp.textContent = `${getIndoor()}°`;
-
     lastForecastData = data;
     renderFuelEstimate(data);
 
@@ -659,7 +655,7 @@
       return;
     }
     saveHouseSettings(h);
-    setIndoor(h.tempDesiderata);
+    syncIndoorTemp(h.tempDesiderata);
     closeSettings();
     showToast('Impostazioni salvate');
     if (lastForecastData) renderFuelEstimate(lastForecastData);
@@ -684,19 +680,6 @@
         els.houseEtaOut.textContent = '88%';
       }
     });
-  });
-
-  els.indoorTemp.addEventListener('dblclick', () => {
-    const current = getIndoor();
-    const input = window.prompt('Temperatura ambiente desiderata (°C)', String(current));
-    if (input == null || input.trim() === '') return;
-    const n = parseFloat(input.replace(',', '.'));
-    if (!Number.isFinite(n) || n < 5 || n > 35) {
-      showToast('Inserisci un valore tra 5 e 35');
-      return;
-    }
-    setIndoor(n);
-    showToast('Temperatura ambiente aggiornata');
   });
 
   function isIOS() {

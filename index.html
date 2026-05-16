@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://api.open-meteo.com" />
   <link rel="preconnect" href="https://geocoding-api.open-meteo.com" />
   <title>Meteo La Nordica - Extraflame</title>
-  <link rel="stylesheet" href="style.css?v=9" />
+  <link rel="stylesheet" href="style.css?v=11" />
 </head>
 <body>
   <div class="app">
@@ -172,29 +172,6 @@
             <div class="forecast-strip" id="forecastList"></div>
           </div>
         </section>
-
-        <div class="hearth">
-          <div class="hearth__embers" aria-hidden="true"></div>
-          <div class="hearth__inner">
-            <div class="hearth__stove" aria-hidden="true">
-              <svg class="stove-svg" viewBox="0 0 140 160" xmlns="http://www.w3.org/2000/svg">
-                <rect x="58" y="0" width="24" height="48" rx="2" fill="#1c1c1c"/>
-                <rect x="32" y="44" width="76" height="96" rx="6" fill="#9e2a2f"/>
-                <rect x="32" y="44" width="76" height="18" rx="6" fill="#7a1f24"/>
-                <rect x="42" y="62" width="56" height="58" rx="4" fill="#252525"/>
-                <ellipse cx="70" cy="88" rx="14" ry="22" fill="#ff7a18"/>
-                <ellipse cx="70" cy="92" rx="8" ry="14" fill="#ffcc4d"/>
-                <rect x="24" y="132" width="92" height="22" rx="4" fill="#3d3d3d"/>
-                <ellipse cx="45" cy="148" rx="4" ry="2" fill="#ff6b35" opacity="0.7"/>
-                <ellipse cx="95" cy="145" rx="3" ry="1.5" fill="#ff6b35" opacity="0.6"/>
-              </svg>
-            </div>
-            <div class="hearth__comfort">
-              <span class="hearth__comfort-label">Temperatura</span>
-              <span class="hearth__comfort-value" id="indoorTemp" title="Doppio clic per modificare">22°</span>
-            </div>
-          </div>
-        </div>
       </div>
 
       <section class="env-benefits" id="envBenefits" hidden aria-labelledby="envBenefitsTitle">
@@ -217,6 +194,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-  <script src="app.js?v=9" defer></script>
+  <script src="app.js?v=11" defer></script>
 </body>
 </html>
