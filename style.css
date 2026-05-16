@@ -480,12 +480,6 @@ a {
   line-height: 1;
 }
 
-.hero-slot__icon--flame .hero__flame {
-  width: 52px;
-  height: 64px;
-  filter: drop-shadow(0 4px 10px rgba(200, 50, 40, 0.3));
-}
-
 .hero-slot__body {
   flex: 1;
   min-width: 0;
@@ -784,11 +778,17 @@ a {
 }
 
 .settings-panel {
-  margin: 0 14px 12px;
+  margin: 10px 0 0;
   padding: 14px 16px;
   background: #fafafa;
   border: 1px solid var(--line);
   border-radius: 16px;
+  flex: 1 1 100%;
+  width: 100%;
+}
+
+.search-panel .settings-panel {
+  margin-top: 12px;
 }
 
 .settings-panel[hidden] {

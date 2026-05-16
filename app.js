@@ -71,6 +71,7 @@
     installGuideTitle: $('installGuideTitle'),
     installGuideClose: $('installGuideClose'),
     btnSettings: $('btnSettings'),
+    btnSettingsAlt: $('btnSettingsAlt'),
     searchPanel: $('searchPanel'),
     settingsPanel: $('settingsPanel'),
     settingsForm: $('settingsForm'),
@@ -300,6 +301,7 @@
   }
 
   function fillSettingsForm() {
+    if (!els.settingsForm || !els.houseM2 || !els.houseClass) return;
     const h = getHouseSettings();
     els.houseM2.value = h.m2 ?? DEFAULT_HOUSE.m2;
     els.houseClass.value = h.classe ?? 'E';
@@ -350,13 +352,25 @@
     }
   }
 
-  function openSettings() {
+  function openSettings(ev) {
+    ev?.preventDefault?.();
+    ev?.stopPropagation?.();
     if (!els.settingsPanel) return;
-    if (els.searchPanel) els.searchPanel.hidden = false;
-    if (els.btnSettings) els.btnSettings.setAttribute('aria-expanded', 'true');
-    fillSettingsForm();
+    if (els.searchPanel?.hidden) {
+      els.searchPanel.hidden = false;
+      if (els.btnSettings) els.btnSettings.setAttribute('aria-expanded', 'true');
+    }
+    try {
+      fillSettingsForm();
+    } catch (err) {
+      console.error(err);
+      showToast('Errore nel caricamento delle impostazioni');
+      return;
+    }
     els.settingsPanel.hidden = false;
-    els.settingsPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    window.requestAnimationFrame(() => {
+      els.settingsPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
   }
 
   function closeSettings() {
@@ -392,49 +406,51 @@
     return dirs[i];
   }
 
-  function getFlameSvg() {
-    return (
-      '<svg class="hero__flame" viewBox="0 0 64 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
-      '<defs><linearGradient id="flameGrad" x1="0%" y1="100%" x2="0%" y2="0%">' +
-      '<stop offset="0%" stop-color="#ffcc33"/><stop offset="45%" stop-color="#ff6b1a"/><stop offset="100%" stop-color="#c41e2a"/>' +
-      '</linearGradient></defs>' +
-      '<path fill="url(#flameGrad)" d="M32 4c-4 18-18 22-18 38 0 12 8 22 18 26 10-4 18-14 18-26 0-16-14-20-18-38zm0 18c2 10 10 14 10 24 0 8-4 14-10 18-6-4-10-10-10-18 0-10 8-14 10-24z"/>' +
-      '</svg>'
-    );
-  }
-
   function wmoIt(code) {
     const map = {
-      0: { desc: 'Sereno', icon: '☀️', preferFlame: true },
-      1: { desc: 'Prevalentemente sereno', icon: '🌤️', preferFlame: true },
-      2: { desc: 'Parzialmente nuvoloso', icon: '⛅', preferFlame: false },
-      3: { desc: 'Nuvoloso', icon: '☁️', preferFlame: false },
-      45: { desc: 'Nebbia', icon: '🌫️', preferFlame: false },
-      48: { desc: 'Nebbia con brina', icon: '🌫️', preferFlame: false },
-      51: { desc: 'Pioggerella leggera', icon: '🌦️', preferFlame: false },
-      53: { desc: 'Pioggerella', icon: '🌦️', preferFlame: false },
-      55: { desc: 'Pioggerella intensa', icon: '🌦️', preferFlame: false },
-      56: { desc: 'Pioggerella gelata', icon: '🌨️', preferFlame: false },
-      57: { desc: 'Pioggerella gelata intensa', icon: '🌨️', preferFlame: false },
-      61: { desc: 'Pioggia leggera', icon: '🌧️', preferFlame: false },
-      63: { desc: 'Pioggia', icon: '🌧️', preferFlame: false },
-      65: { desc: 'Pioggia forte', icon: '⛈️', preferFlame: false },
-      66: { desc: 'Pioggia gelata', icon: '🌨️', preferFlame: false },
-      67: { desc: 'Pioggia gelata forte', icon: '🌨️', preferFlame: false },
-      71: { desc: 'Neve leggera', icon: '❄️', preferFlame: false },
-      73: { desc: 'Neve', icon: '❄️', preferFlame: false },
-      75: { desc: 'Neve intensa', icon: '❄️', preferFlame: false },
-      77: { desc: 'Granelli di neve', icon: '❄️', preferFlame: false },
-      80: { desc: 'Rovesci leggeri', icon: '🌧️', preferFlame: false },
-      81: { desc: 'Rovesci', icon: '🌧️', preferFlame: false },
-      82: { desc: 'Rovesci violenti', icon: '⛈️', preferFlame: false },
-      85: { desc: 'Rovesci di neve', icon: '🌨️', preferFlame: false },
-      86: { desc: 'Forti rovesci di neve', icon: '🌨️', preferFlame: false },
-      95: { desc: 'Temporale', icon: '⛈️', preferFlame: false },
-      96: { desc: 'Temporale con grandine', icon: '⛈️', preferFlame: false },
-      99: { desc: 'Temporale forte con grandine', icon: '⛈️', preferFlame: false },
+      0: { desc: 'Sereno', icon: '☀️' },
+      1: { desc: 'Prevalentemente sereno', icon: '🌤️' },
+      2: { desc: 'Parzialmente nuvoloso', icon: '⛅' },
+      3: { desc: 'Nuvoloso', icon: '☁️' },
+      45: { desc: 'Nebbia', icon: '🌫️' },
+      48: { desc: 'Nebbia con brina', icon: '🌫️' },
+      51: { desc: 'Pioggerella leggera', icon: '🌦️' },
+      53: { desc: 'Pioggerella', icon: '🌦️' },
+      55: { desc: 'Pioggerella intensa', icon: '🌦️' },
+      56: { desc: 'Pioggerella gelata', icon: '🌨️' },
+      57: { desc: 'Pioggerella gelata intensa', icon: '🌨️' },
+      61: { desc: 'Pioggia leggera', icon: '🌧️' },
+      63: { desc: 'Pioggia', icon: '🌧️' },
+      65: { desc: 'Pioggia forte', icon: '⛈️' },
+      66: { desc: 'Pioggia gelata', icon: '🌨️' },
+      67: { desc: 'Pioggia gelata forte', icon: '🌨️' },
+      71: { desc: 'Neve leggera', icon: '❄️' },
+      73: { desc: 'Neve', icon: '❄️' },
+      75: { desc: 'Neve intensa', icon: '❄️' },
+      77: { desc: 'Granelli di neve', icon: '❄️' },
+      80: { desc: 'Rovesci leggeri', icon: '🌧️' },
+      81: { desc: 'Rovesci', icon: '🌧️' },
+      82: { desc: 'Rovesci violenti', icon: '⛈️' },
+      85: { desc: 'Rovesci di neve', icon: '🌨️' },
+      86: { desc: 'Forti rovesci di neve', icon: '🌨️' },
+      95: { desc: 'Temporale', icon: '⛈️' },
+      96: { desc: 'Temporale con grandine', icon: '⛈️' },
+      99: { desc: 'Temporale forte con grandine', icon: '⛈️' },
     };
-    return map[code] || { desc: 'Condizioni variabili', icon: '🌡️', preferFlame: false };
+    return map[code] || { desc: 'Condizioni variabili', icon: '🌡️' };
+  }
+
+  function isNightHour(date) {
+    const h = date.getHours();
+    return h >= 20 || h < 6;
+  }
+
+  function weatherIcon(code, at) {
+    const w = wmoIt(code);
+    if (!isNightHour(at)) return w.icon;
+    if (code === 0 || code === 1) return '🌙';
+    if (code === 2) return '🌙';
+    return w.icon;
   }
 
   function weekdayLongUpper(isoDate) {
@@ -453,12 +469,11 @@
     els.locationMeta.textContent = `${dateStr} · agg. ${timeStr}`;
   }
 
-  function heroIconHtml(code) {
+  function heroIconHtml(code, at) {
     const w = wmoIt(code);
-    if (w.preferFlame) {
-      return `<span class="hero-slot__icon hero-slot__icon--flame" role="img" aria-label="${w.desc}">${getFlameSvg()}</span>`;
-    }
-    return `<span class="hero-slot__icon" role="img" aria-label="${w.desc}">${w.icon}</span>`;
+    const when = at instanceof Date ? at : new Date();
+    const icon = weatherIcon(code, when);
+    return `<span class="hero-slot__icon" role="img" aria-label="${w.desc}">${icon}</span>`;
   }
 
   function formatClock(date) {
@@ -522,6 +537,7 @@
         apparent: cur.apparent_temperature,
         humidity: cur.relative_humidity_2m,
         isNow: true,
+        at: now,
       },
     ];
 
@@ -548,6 +564,7 @@
         apparent: hourly.apparent_temperature[idx],
         humidity: hourly.relative_humidity_2m[idx],
         isNow: false,
+        at: when,
       });
     }
 
@@ -566,7 +583,7 @@
 
       const visual = document.createElement('div');
       visual.className = 'hero-slot__visual';
-      visual.innerHTML = heroIconHtml(slot.code);
+      visual.innerHTML = heroIconHtml(slot.code, slot.at);
 
       const body = document.createElement('div');
       body.className = 'hero-slot__body';
@@ -966,7 +983,14 @@
     els.btnSettings.setAttribute('aria-controls', 'searchPanel');
     els.btnSettings.addEventListener('click', toggleSearchPanel);
   }
-  if (els.btnSettingsAlt) els.btnSettingsAlt.addEventListener('click', openSettings);
+  const settingsAltBtn = els.btnSettingsAlt || document.getElementById('btnSettingsAlt');
+  if (settingsAltBtn) {
+    settingsAltBtn.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      openSettings(ev);
+    });
+  }
 
   if (els.settingsClose) els.settingsClose.addEventListener('click', closeSettings);
 

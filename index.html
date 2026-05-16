@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://api.open-meteo.com" />
   <link rel="preconnect" href="https://geocoding-api.open-meteo.com" />
   <title>Meteo La Nordica - Extraflame</title>
-  <link rel="stylesheet" href="style.css?v=19" />
+  <link rel="stylesheet" href="style.css?v=21" />
 </head>
 <body>
   <div class="app">
@@ -77,10 +77,8 @@
         </div>
         <button type="button" class="btn btn--ghost" id="btnGeo">Posizione</button>
         <button type="button" class="btn btn--ghost btn--settings" id="btnSettingsAlt">Impostazioni casa</button>
-      </section>
-
-      <section class="settings-panel" id="settingsPanel" hidden>
-        <form class="settings-form" id="settingsForm">
+        <section class="settings-panel" id="settingsPanel" hidden>
+          <form class="settings-form" id="settingsForm">
           <div class="settings-form__head">
             <h2 class="settings-form__title" id="settingsTitle">Impostazioni casa</h2>
             <button type="button" class="settings-form__close" id="settingsClose" aria-label="Chiudi">×</button>
@@ -131,7 +129,8 @@
           <div class="settings-form__actions">
             <button type="submit" class="btn btn--primary">Salva</button>
           </div>
-        </form>
+          </form>
+        </section>
       </section>
 
       <section class="fuel-card" id="fuelCard" aria-labelledby="fuelCardTitle">
@@ -208,6 +207,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-  <script src="app.js?v=19" defer></script>
+  <script src="app.js?v=22" defer></script>
 </body>
 </html>
